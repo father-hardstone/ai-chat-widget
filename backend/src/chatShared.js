@@ -205,6 +205,12 @@ async function handleChatPost(req, res) {
     if (knowledgeContext == null) return
     runtimeLog('chat', 'route: knowledge base loaded', { rid, contextChars: knowledgeContext.length })
 
+    const rawUserCount = body?.userMessageCount
+    const userMessageCount =
+      typeof rawUserCount === 'number' && Number.isFinite(rawUserCount) && rawUserCount >= 1
+        ? Math.floor(rawUserCount)
+        : undefined
+
     try {
       const reply = await generateReply({
         apiKey: GEMINI_API_KEY,
@@ -212,6 +218,7 @@ async function handleChatPost(req, res) {
         knowledgeContext,
         userMessage: message,
         history,
+        userMessageCount,
       })
       runtimeLog('chat', 'route: response sent', { rid, replyChars: reply.length })
       sendJson(res, 200, { success: true, reply })

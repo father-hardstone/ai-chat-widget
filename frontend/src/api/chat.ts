@@ -176,9 +176,14 @@ export async function fetchWelcomeMessage(signal?: AbortSignal): Promise<string>
 export async function sendChatMessage(input: {
   message: string
   history?: { role: 'user' | 'assistant'; content: string }[]
+  /** 1-based count of user messages including this one; used for email-timing rules. */
+  userMessageCount?: number
 }): Promise<string> {
   const payload = {
     message: input.message,
+    ...(input.userMessageCount != null && input.userMessageCount >= 1
+      ? { userMessageCount: input.userMessageCount }
+      : {}),
     ...(input.history && input.history.length
       ? { history: input.history.slice(-MAX_HISTORY_TURNS) }
       : {}),

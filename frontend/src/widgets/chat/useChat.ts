@@ -119,6 +119,7 @@ export function useChat(panelOpen: boolean): UseChatState {
     }
 
     const history = messages.slice(-4).map(({ role, content: c }) => ({ role, content: c }))
+    const userMessageCount = messages.filter((m) => m.role === 'user').length + 1
 
     setMessages((prev) => [...prev, userMsg])
     setIsSending(true)
@@ -126,7 +127,7 @@ export function useChat(panelOpen: boolean): UseChatState {
     setRateLimitInfo(null)
 
     try {
-      const reply = await sendChatMessage({ message: content, history })
+      const reply = await sendChatMessage({ message: content, history, userMessageCount })
       const assistantMsg: ChatMessage = {
         id: makeId('msg'),
         role: 'assistant',
