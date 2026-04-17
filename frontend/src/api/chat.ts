@@ -1,3 +1,5 @@
+import { apiUrl } from '../config/apiBase'
+
 export type ChatApiErrorPayload = {
   success: false
   error: {
@@ -116,27 +118,14 @@ export function mapFetchFailure(err: unknown): string {
       'What you can try:',
       '• Start the API: cd backend && npm run dev',
       '• Open http://localhost:3001/health — you should see JSON with ok: true',
-      '• If the UI calls the API on another origin, set VITE_API_BASE_URL in frontend/.env (see .env.example) and set CLIENT_ORIGIN on the backend to match this Vite URL',
-      '• Same-origin dev: leave VITE_API_BASE_URL unset and use the Vite proxy (see vite.config.ts)',
+      '• Set VITE_API_BASE_URL in frontend/.env to your API origin (see .env.example)',
+      '• On the backend, set CLIENT_ORIGIN to this app’s origin (e.g. http://localhost:5173) for CORS',
     ].join('\n')
   }
   return m
 }
 
 const MAX_HISTORY_TURNS = 4
-
-/** Base URL for the chat API (no trailing slash). Empty = same-origin `/api` (e.g. Vite proxy). */
-function getApiBase(): string {
-  const raw = import.meta.env.VITE_API_BASE_URL
-  if (raw == null || String(raw).trim() === '') return ''
-  return String(raw).replace(/\/$/, '')
-}
-
-function apiUrl(path: string): string {
-  const base = getApiBase()
-  const p = path.startsWith('/') ? path : `/${path}`
-  return base ? `${base}${p}` : p
-}
 
 export async function fetchWelcomeMessage(signal?: AbortSignal): Promise<string> {
   let res: Response
@@ -215,8 +204,8 @@ export async function sendChatMessage(input: {
       message: 'The server returned data that is not valid JSON.',
       detail: `HTTP ${res.status}. Start of body: ${rawText.slice(0, 280)}${rawText.length > 280 ? '…' : ''}`,
       hints: [
-        'If using the Vite proxy, run the backend and open the app via the Vite dev URL.',
-        'If using VITE_API_BASE_URL, confirm the backend URL and CORS (CLIENT_ORIGIN).',
+        'Confirm VITE_API_BASE_URL in frontend/.env matches the running API.',
+        'Confirm backend CLIENT_ORIGIN includes this app’s URL (CORS).',
         'In DevTools → Network, inspect the /api/chat response body.',
       ],
       httpStatus: res.status,

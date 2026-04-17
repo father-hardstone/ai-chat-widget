@@ -23,13 +23,16 @@ npm install
 cp .env.example .env
 ```
 
-### API URL
+### API URL (`frontend/.env`)
 
-| Scenario | `VITE_API_BASE_URL` |
-|----------|---------------------|
-| **Vite dev + proxy** (default) | Leave unset or empty. Requests go to `/api/...`, and Vite forwards them to `http://localhost:3001`. |
-| **Cross-origin local** | Set to `http://localhost:3001` (must match backend `PORT`). Set backend `CLIENT_ORIGIN` to `http://localhost:5173`. |
-| **Production** | Set to your deployed API origin, e.g. `https://api.yourdomain.com`. Backend `CLIENT_ORIGIN` must include your frontend origin, e.g. `https://app.yourdomain.com`. |
+**Required:** `VITE_API_BASE_URL` — full origin of the API (no trailing slash). The app does not fall back to relative `/api` URLs or a dev proxy; all requests use this value.
+
+| Scenario | Example |
+|----------|---------|
+| **Local** | `VITE_API_BASE_URL=http://localhost:3001` (match `PORT` in `backend/.env`). Set backend `CLIENT_ORIGIN=http://localhost:5173` for CORS. |
+| **Production** | `VITE_API_BASE_URL=https://api.yourdomain.com`. Set backend `CLIENT_ORIGIN` to your deployed frontend origin, e.g. `https://app.yourdomain.com`. |
+
+Set `VITE_API_BASE_URL` in your static host’s **build** environment (e.g. Vercel) so the bundle points at the live API.
 
 ## Run
 
