@@ -1,0 +1,38 @@
+# Single-repo layout: one `.gitignore` for the whole tree (deploy frontend/backend separately).
+
+# Dependencies
+node_modules/
+
+# Builds
+dist/
+dist-ssr/
+
+# Vite / env (keep tracked examples)
+*.local
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

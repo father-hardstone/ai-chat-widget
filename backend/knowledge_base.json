@@ -1,0 +1,258 @@
+[
+    {
+      "id": 1,
+      "category": "general",
+      "question": "What is XYZ Store?",
+      "variants": [
+        "Tell me about XYZ Store",
+        "What does XYZ Store do?",
+        "XYZ store kya hai?",
+        "what is this store about"
+      ],
+      "answer": "XYZ Store is a clothing and apparel retailer offering fashion for men, women, and children including casual, formal, and seasonal wear."
+    },
+    {
+      "id": 2,
+      "category": "general",
+      "question": "What do you sell?",
+      "variants": [
+        "What products do you have?",
+        "Do you sell clothes?",
+        "aap kya bechte ho?",
+        "what items are available"
+      ],
+      "answer": "We sell clothing, footwear, and accessories for men, women, and kids across multiple styles and seasons."
+    },
+    {
+      "id": 3,
+      "category": "products",
+      "question": "Do you sell men's clothing?",
+      "variants": [
+        "men clothes available?",
+        "Do you have stuff for men?",
+        "mens section hai?",
+        "clothes for boys?"
+      ],
+      "answer": "Yes, we offer a wide range of men's clothing including shirts, trousers, jackets, and activewear."
+    },
+    {
+      "id": 4,
+      "category": "products",
+      "question": "Do you sell women's clothing?",
+      "variants": [
+        "ladies dresses available?",
+        "Do you have women collection?",
+        "female clothes?",
+        "girls clothes milte hain?"
+      ],
+      "answer": "Yes, we offer a variety of women's clothing including dresses, tops, jeans, and formal wear."
+    },
+    {
+      "id": 5,
+      "category": "products",
+      "question": "Do you have kids clothing?",
+      "variants": [
+        "children clothes?",
+        "kids section hai?",
+        "baby clothes milte hain?",
+        "clothes for kids?"
+      ],
+      "answer": "Yes, we offer clothing for children across different age groups."
+    },
+    {
+      "id": 6,
+      "category": "sizes",
+      "question": "What sizes do you offer?",
+      "variants": [
+        "size range kya hai?",
+        "Do you have large sizes?",
+        "available sizes?",
+        "XS to XXL milta hai?"
+      ],
+      "answer": "We offer sizes ranging from XS to XXL depending on the product."
+    },
+    {
+      "id": 7,
+      "category": "sizes",
+      "question": "Do you have a size guide?",
+      "variants": [
+        "size chart hai?",
+        "how to choose size?",
+        "measurement guide?",
+        "size kaise choose karun?"
+      ],
+      "answer": "Yes, a detailed size guide is available on each product page to help you choose the right fit."
+    },
+    {
+      "id": 8,
+      "category": "sizes",
+      "question": "What if the size doesn't fit?",
+      "variants": [
+        "wrong size mila",
+        "size exchange possible?",
+        "fit nahi aya to?",
+        "can I change size?"
+      ],
+      "answer": "You can request a size exchange within the return period if the item does not fit."
+    },
+    {
+      "id": 9,
+      "category": "payments",
+      "question": "What payment methods do you accept?",
+      "variants": [
+        "how can I pay?",
+        "payment options?",
+        "COD available?",
+        "payment kaise karna hai?"
+      ],
+      "answer": "We accept credit/debit cards, digital wallets, and cash on delivery in selected areas."
+    },
+    {
+      "id": 10,
+      "category": "payments",
+      "question": "Do you offer cash on delivery?",
+      "variants": [
+        "COD available?",
+        "cash payment possible?",
+        "delivery pe payment?",
+        "cash on delivery hai?"
+      ],
+      "answer": "Yes, cash on delivery is available in selected areas."
+    },
+  
+    {
+      "id": 11,
+      "category": "shipping",
+      "question": "Do you deliver nationwide?",
+      "variants": [
+        "Do you ship everywhere?",
+        "delivery available in my city?",
+        "har jagah delivery hoti hai?",
+        "can you deliver to my area?"
+      ],
+      "answer": "Yes, we deliver to most locations nationwide. Availability is confirmed at checkout."
+    },
+    {
+      "id": 12,
+      "category": "shipping",
+      "question": "How long does delivery take?",
+      "variants": [
+        "delivery time?",
+        "kitne din lagenge?",
+        "when will my order arrive?",
+        "shipping duration?"
+      ],
+      "answer": "Delivery usually takes 3–7 business days depending on your location."
+    },
+    {
+      "id": 13,
+      "category": "shipping",
+      "question": "Can I track my order?",
+      "variants": [
+        "track order?",
+        "where is my parcel?",
+        "order tracking kaise karein?",
+        "parcel kahan hai?"
+      ],
+      "answer": "Yes, once your order is shipped, you will receive a tracking link via email or SMS."
+    },
+    {
+      "id": 14,
+      "category": "shipping",
+      "question": "Why is my order late?",
+      "variants": [
+        "order delay ho gaya",
+        "why late delivery?",
+        "order abhi tak nahi aya",
+        "delay kyu ho raha hai?"
+      ],
+      "answer": "Delays may occur due to logistics or high demand. Please check your tracking link for updates."
+    },
+  
+    {
+      "id": 15,
+      "category": "returns",
+      "question": "What is your return policy?",
+      "variants": [
+        "can I return items?",
+        "return ka scene kya hai?",
+        "return policy kya hai?",
+        "how do returns work?"
+      ],
+      "answer": "Items can be returned within 7–14 days if unused and in original condition."
+    },
+    {
+      "id": 16,
+      "category": "returns",
+      "question": "How do I return an item?",
+      "variants": [
+        "return kaise karein?",
+        "how to send back product?",
+        "return process?",
+        "item wapas kaise bheju?"
+      ],
+      "answer": "You can initiate a return through your account or by contacting support."
+    },
+    {
+      "id": 17,
+      "category": "returns",
+      "question": "How long do refunds take?",
+      "variants": [
+        "refund kab milega?",
+        "refund time?",
+        "money back kab ayega?",
+        "how many days for refund?"
+      ],
+      "answer": "Refunds are processed within 5–10 business days after approval."
+    },
+  
+    {
+      "id": 18,
+      "category": "account",
+      "question": "Do I need an account to order?",
+      "variants": [
+        "guest checkout possible?",
+        "account zaroori hai?",
+        "can I order without login?",
+        "sign up needed?"
+      ],
+      "answer": "No, you can place an order using guest checkout without creating an account."
+    },
+    {
+      "id": 19,
+      "category": "account",
+      "question": "Can I cancel my order?",
+      "variants": [
+        "cancel order?",
+        "order cancel kaise karein?",
+        "can I stop my order?",
+        "cancel possible?"
+      ],
+      "answer": "Orders can be canceled before they are shipped."
+    },
+  
+    {
+      "id": 20,
+      "category": "fallback",
+      "question": "I need help choosing a product",
+      "variants": [
+        "can you suggest something?",
+        "help me pick clothes",
+        "recommend something for me",
+        "kuch suggest karo"
+      ],
+      "answer": "For personalized recommendations, please contact our sales team at abc@xyz.com."
+    },
+    {
+      "id": 21,
+      "category": "fallback",
+      "question": "I have a specific question not listed here",
+      "variants": [
+        "something else",
+        "I need more info",
+        "not answered here",
+        "aur kuch poochna hai"
+      ],
+      "answer": "For further assistance, please contact our support team at abc@xyz.com."
+    }
+  ]
