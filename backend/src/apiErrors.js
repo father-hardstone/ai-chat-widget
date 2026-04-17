@@ -237,6 +237,19 @@ function mapGeminiError(err, ctx) {
 
   if (err instanceof Error) {
     const msg = err.message || 'Unknown error'
+    if (/timed out after \d+ms/i.test(msg)) {
+      return buildApiError(
+        'GEMINI_TIMEOUT',
+        504,
+        'The AI request took too long and was stopped.',
+        msg,
+        [
+          'Retry once; transient slowness happens.',
+          'Adjust `GEMINI_REQUEST_TIMEOUT_MS` (default 45000) if your host allows longer runs.',
+          'On Vercel, ensure `GEMINI_API_KEY` and `GEMINI_MODEL` are set and the model is reachable from your region.',
+        ],
+      )
+    }
     if (/empty response/i.test(msg)) {
       return buildApiError(
         'GEMINI_EMPTY_REPLY',

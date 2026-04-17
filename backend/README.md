@@ -3,7 +3,7 @@
 Standalone **Express** API for the chat assistant: **Google Gemini**, a JSON **knowledge base**, rate limiting, and structured errors.
 
 - **Long‑running Node**: `npm start` — good for Render, Railway, Fly.io, etc.
-- **Serverless (Vercel)**: `api/index.js` wraps the same app with [`serverless-http`](https://github.com/dougmoscrop/serverless-http); `vercel.json` rewrites all paths to that function. Set env vars in the Vercel project (no `.env` file in production).
+- **Serverless (Vercel)**: `api/index.js` wraps the Express app with [`serverless-http`](https://github.com/dougmoscrop/serverless-http). **`GET /health`**, **`GET /`**, and **favicons** are answered **before** loading Express (so cold starts don’t block health checks while Gemini SDK + routes load). Chat routes still use the full app. Set env vars in the Vercel project (no `.env` file in production).
 
 ## Requirements
 

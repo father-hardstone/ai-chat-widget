@@ -80,6 +80,10 @@ app.use(
 )
 app.use(express.json({ limit: '1mb' }))
 
+/** Browsers request these on the API host; answer immediately (rewrite `/(.*)` would otherwise hit the app for every asset). */
+app.get('/favicon.ico', (_req, res) => res.status(204).end())
+app.get('/favicon.png', (_req, res) => res.status(204).end())
+
 const chatRateLimit = createChatRateLimiter({
   windowMs: CHAT_RATE_LIMIT_WINDOW_MS,
   max: CHAT_RATE_LIMIT_MAX,

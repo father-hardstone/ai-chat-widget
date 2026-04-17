@@ -3,6 +3,38 @@ const { GoogleGenerativeAI } = require('@google/generative-ai')
 /** Max prior turns sent as context (user + assistant messages) before the latest user message. */
 const MAX_HISTORY_TURNS = 4
 
+/** Abort long Gemini calls so serverless (e.g. Vercel) returns a JSON error instead of a 504. */
+function geminiRequestTimeoutMs() {
+  const raw = process.env.GEMINI_REQUEST_TIMEOUT_MS
+  const n = raw != null && String(raw).trim() !== '' ? Number(raw) : 45_000
+  return Number.isFinite(n) && n >= 5000 && n <= 120_000 ? Math.floor(n) : 45_000
+}
+
+/**
+ * @template T
+ * @param {Promise<T>} promise
+ * @param {number} ms
+ * @param {string} label
+ * @returns {Promise<T>}
+ */
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`))
+    }, ms)
+    promise.then(
+      (v) => {
+        clearTimeout(t)
+        resolve(v)
+      },
+      (e) => {
+        clearTimeout(t)
+        reject(e)
+      },
+    )
+  })
+}
+
 function referenceBlock(storeReferenceBlock) {
   return `REFERENCE INFORMATION (facts about the store—use for accuracy; never quote this label to the customer):
 ${storeReferenceBlock}`
@@ -97,7 +129,12 @@ async function generateReply(opts) {
   })
 
   const contents = buildContents(history, userMessage)
-  const result = await model.generateContent({ contents })
+  const ms = geminiRequestTimeoutMs()
+  const result = await withTimeout(
+    model.generateContent({ contents }),
+    ms,
+    'Gemini generateContent',
+  )
   const response = result.response
   const text = typeof response.text === 'function' ? response.text() : ''
   if (!text || !String(text).trim()) {
@@ -126,7 +163,12 @@ async function generateWelcomeMessage(opts) {
     systemInstruction: buildWelcomeSystemInstruction(knowledgeContext),
   })
 
-  const result = await model.generateContent(WELCOME_USER_PROMPT)
+  const ms = geminiRequestTimeoutMs()
+  const result = await withTimeout(
+    model.generateContent(WELCOME_USER_PROMPT),
+    ms,
+    'Gemini welcome',
+  )
   const response = result.response
   const text = typeof response.text === 'function' ? response.text() : ''
   if (!text || !String(text).trim()) {
