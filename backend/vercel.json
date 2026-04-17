@@ -1,9 +1,14 @@
 {
   "version": 2,
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
+  "rewrites": [
+    { "source": "/health", "destination": "/api/health" },
+    { "source": "/", "destination": "/api" },
+    { "source": "/favicon.ico", "destination": "/api/favicon" },
+    { "source": "/favicon.png", "destination": "/api/favicon" }
+  ],
   "functions": {
-    "api/index.js": {
-      "maxDuration": 60
-    }
+    "api/chat/welcome.js": { "maxDuration": 60 },
+    "api/chat/index.js": { "maxDuration": 60 },
+    "api/gemini/models.js": { "maxDuration": 30 }
   }
 }

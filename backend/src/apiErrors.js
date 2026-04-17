@@ -41,15 +41,26 @@ function buildApiError(code, httpStatus, message, detail, hints, meta) {
 }
 
 /**
- * @param {import('express').Response} res
+ * @param {import('express').Response | import('http').ServerResponse} res
  * @param {ApiErrorBody & { httpStatus: number, retryAfterSeconds?: number }} payload
  */
 function sendApiError(res, payload) {
   const { httpStatus, retryAfterSeconds, ...body } = payload
   if (retryAfterSeconds != null) {
-    res.set('Retry-After', String(Math.max(1, Math.ceil(retryAfterSeconds))))
+    const ra = String(Math.max(1, Math.ceil(retryAfterSeconds)))
+    if (typeof res.set === 'function') {
+      res.set('Retry-After', ra)
+    } else {
+      res.setHeader('Retry-After', ra)
+    }
   }
-  res.status(httpStatus).json(body)
+  if (typeof res.status === 'function' && typeof res.json === 'function') {
+    res.status(httpStatus).json(body)
+    return
+  }
+  res.statusCode = httpStatus
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.end(JSON.stringify(body))
 }
 
 function safeJson(value, maxLen = 1200) {
@@ -328,13 +339,23 @@ function mapKnowledgeBaseError(err) {
  */
 function mapBodyParserError(err, req) {
   const anyErr = err
+  const pathHint = (req.path || (typeof req.url === 'string' ? req.url : '') || '').split('?')[0]
+  if (anyErr && anyErr.type === 'entity.too.large') {
+    return buildApiError(
+      'PAYLOAD_TOO_LARGE',
+      413,
+      'Request body is too large.',
+      'The JSON body exceeded the size limit.',
+      ['Send a shorter message.', `Method was ${req.method} ${pathHint}.`],
+    )
+  }
   if (anyErr && anyErr.type === 'entity.parse.failed') {
     return buildApiError(
       'INVALID_JSON_BODY',
       400,
       'The request body is not valid JSON.',
       'The client sent malformed JSON in the POST body. Chat messages must be JSON like {"message":"..."}.',
-      ['Ensure the frontend sends Content-Type: application/json and valid JSON.', `Method was ${req.method} ${req.path}.`],
+      ['Ensure the frontend sends Content-Type: application/json and valid JSON.', `Method was ${req.method} ${pathHint}.`],
     )
   }
   return null
