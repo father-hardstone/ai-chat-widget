@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai')
+const { runtimeLog, runtimeError } = require('./runtimeLog')
 
 /** Max prior turns sent as context (user + assistant messages) before the latest user message. */
 const MAX_HISTORY_TURNS = 4
@@ -20,6 +21,11 @@ function geminiRequestTimeoutMs() {
 function withTimeout(promise, ms, label) {
   return new Promise((resolve, reject) => {
     const t = setTimeout(() => {
+      runtimeError('gemini', `TIMEOUT: ${label}`, {
+        ms,
+        hint:
+          'Google did not finish in time. Check GEMINI_API_KEY, GEMINI_MODEL, quota, or set GEMINI_REQUEST_TIMEOUT_MS below your Vercel function maxDuration.',
+      })
       reject(new Error(`${label} timed out after ${ms}ms`))
     }, ms)
     promise.then(
@@ -130,11 +136,14 @@ async function generateReply(opts) {
 
   const contents = buildContents(history, userMessage)
   const ms = geminiRequestTimeoutMs()
+  const tChat = Date.now()
+  runtimeLog('gemini', 'chat: calling generateContent', { model: modelName, timeoutMs: ms })
   const result = await withTimeout(
     model.generateContent({ contents }),
     ms,
     'Gemini generateContent',
   )
+  runtimeLog('gemini', 'chat: generateContent returned', { model: modelName, elapsedMs: Date.now() - tChat })
   const response = result.response
   const text = typeof response.text === 'function' ? response.text() : ''
   if (!text || !String(text).trim()) {
@@ -164,11 +173,14 @@ async function generateWelcomeMessage(opts) {
   })
 
   const ms = geminiRequestTimeoutMs()
+  const t0 = Date.now()
+  runtimeLog('gemini', 'welcome: calling generateContent', { model: name, timeoutMs: ms })
   const result = await withTimeout(
     model.generateContent(WELCOME_USER_PROMPT),
     ms,
     'Gemini welcome',
   )
+  runtimeLog('gemini', 'welcome: generateContent returned', { model: name, elapsedMs: Date.now() - t0 })
   const response = result.response
   const text = typeof response.text === 'function' ? response.text() : ''
   if (!text || !String(text).trim()) {

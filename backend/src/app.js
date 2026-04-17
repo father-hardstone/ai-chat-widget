@@ -16,6 +16,14 @@ const {
 } = require('./apiErrors')
 const { createChatRateLimiter } = require('./chatRateLimit')
 const { listModelsWithGenerateContent } = require('./geminiModels')
+const { runtimeLog, runtimeError } = require('./runtimeLog')
+
+/** Correlate lines in Vercel Runtime Logs for one HTTP request. */
+function requestId(req) {
+  const v = req.headers['x-vercel-id']
+  if (v) return String(v).slice(0, 20)
+  return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+}
 
 /** @returns {string[]} */
 function allowedOriginsList() {
@@ -243,10 +251,14 @@ app.get('/api/gemini/models', async (_req, res) => {
 })
 
 /** Opening line when the chat panel loads (same Gemini config + reference as /api/chat). */
-app.get('/api/chat/welcome', chatRateLimit, async (_req, res) => {
+app.get('/api/chat/welcome', chatRateLimit, async (req, res) => {
+  const rid = requestId(req)
+  runtimeLog('welcome', 'route: entered', { rid })
   if (!requireGeminiEnv(res)) return
+  runtimeLog('welcome', 'route: GEMINI_* env ok', { rid })
   const knowledgeContext = loadKnowledgeContextForChat(res)
   if (knowledgeContext == null) return
+  runtimeLog('welcome', 'route: knowledge base loaded', { rid, contextChars: knowledgeContext.length })
 
   try {
     const reply = await generateWelcomeMessage({
@@ -254,17 +266,20 @@ app.get('/api/chat/welcome', chatRateLimit, async (_req, res) => {
       modelName: GEMINI_MODEL,
       knowledgeContext,
     })
+    runtimeLog('welcome', 'route: response sent', { rid, replyChars: reply.length })
     res.json({ success: true, reply })
   } catch (e) {
-    console.error('Gemini welcome error:', e)
+    runtimeError('welcome', 'route: handler error', e instanceof Error ? e : { detail: String(e) })
     const mapped = mapGeminiError(e, { modelName: GEMINI_MODEL })
     sendApiError(res, mapped)
   }
 })
 
 app.post('/api/chat', chatRateLimit, async (req, res) => {
+  const rid = requestId(req)
   const message = typeof req.body?.message === 'string' ? req.body.message : ''
   const history = normalizeHistory(req.body?.history)
+  runtimeLog('chat', 'route: entered', { rid, messageChars: message.length, historyTurns: history.length })
 
   if (!message.trim()) {
     sendApiError(
@@ -284,8 +299,10 @@ app.post('/api/chat', chatRateLimit, async (req, res) => {
   }
 
   if (!requireGeminiEnv(res)) return
+  runtimeLog('chat', 'route: GEMINI_* env ok', { rid })
   const knowledgeContext = loadKnowledgeContextForChat(res)
   if (knowledgeContext == null) return
+  runtimeLog('chat', 'route: knowledge base loaded', { rid, contextChars: knowledgeContext.length })
 
   try {
     const reply = await generateReply({
@@ -295,9 +312,10 @@ app.post('/api/chat', chatRateLimit, async (req, res) => {
       userMessage: message,
       history,
     })
+    runtimeLog('chat', 'route: response sent', { rid, replyChars: reply.length })
     res.json({ success: true, reply })
   } catch (e) {
-    console.error('Gemini error:', e)
+    runtimeError('chat', 'route: handler error', e instanceof Error ? e : { detail: String(e) })
     const mapped = mapGeminiError(e, { modelName: GEMINI_MODEL })
     sendApiError(res, mapped)
   }

@@ -9,6 +9,7 @@ const path = require('path')
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') })
 
 const serverless = require('serverless-http')
+const { runtimeLog } = require('../src/runtimeLog')
 
 /** @type {ReturnType<typeof serverless> | null} */
 let cachedExpressHandler = null
@@ -75,7 +76,10 @@ module.exports = (req, res) => {
   }
 
   if (!cachedExpressHandler) {
+    runtimeLog('api', 'cold_start: loading Express app + routes (first request after deploy can take several seconds)')
+    const t0 = Date.now()
     const app = require('../src/app')
+    runtimeLog('api', 'cold_start: Express app loaded', { loadMs: Date.now() - t0 })
     cachedExpressHandler = serverless(app)
   }
   return cachedExpressHandler(req, res)

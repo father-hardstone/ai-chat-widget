@@ -34,6 +34,20 @@ Edit `.env`:
 3. Deploy. Your API base is `https://<project>.vercel.app` — use that value for the frontend **`VITE_API_BASE_URL`**.
 4. **Rate limiting** uses in-memory state per function instance; under load, limits are approximate (typical for serverless). For strict global limits, use Redis or an edge KV later.
 
+### Debugging timeouts (504) on Vercel
+
+Open **Project → Deployments → [deployment] → Runtime Logs** (or the **Logs** tab while testing). The app prints **timestamped stages**:
+
+| Prefix | Meaning |
+|--------|---------|
+| `[api] cold_start: …` | First chat request after idle: `require(app)` timing (large import). |
+| `[welcome]` / `[chat]` | Express route: env check → knowledge base → response. |
+| `[gemini]` | Before/after `generateContent`, or **`TIMEOUT`** if Google exceeds `GEMINI_REQUEST_TIMEOUT_MS` (default 45s). |
+
+If logs stop right after `welcome: calling generateContent` with no `generateContent returned`, the hang is **upstream to Google** (key, model id, quota, network). If you see **`cold_start` with very high `loadMs`**, the delay is **loading the Node bundle**, not Gemini yet.
+
+**Note:** A **504 from Vercel** at exactly your **function max duration** means the whole invocation exceeded that limit (cold start + Gemini + anything else). Keep `GEMINI_REQUEST_TIMEOUT_MS` **below** `maxDuration` in `vercel.json` so the handler can return a JSON error instead of a platform 504 when possible.
+
 ## Run
 
 ```bash
