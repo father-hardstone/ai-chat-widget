@@ -26,6 +26,13 @@ function requestPath(req) {
   return u.split('?')[0] || '/'
 }
 
+function logRequest(req, p) {
+  const origin = req.headers.origin || ''
+  const fwd = req.headers['x-forwarded-for']
+  const ip = typeof fwd === 'string' ? fwd.split(',')[0].trim() : ''
+  console.log(`[api] ${req.method} ${p} origin=${origin || '(same-origin or direct)'} ${ip ? `ip=${ip}` : ''}`)
+}
+
 function sendHealthJson(res) {
   const key = process.env.GEMINI_API_KEY || ''
   const model = (process.env.GEMINI_MODEL || '').trim()
@@ -44,6 +51,7 @@ function sendHealthJson(res) {
 
 module.exports = (req, res) => {
   const p = requestPath(req)
+  logRequest(req, p)
 
   if (p === '/health' || p === '/api/health') {
     sendHealthJson(res)

@@ -17,17 +17,14 @@ const {
 const { createChatRateLimiter } = require('./chatRateLimit')
 const { listModelsWithGenerateContent } = require('./geminiModels')
 
-/** Comma-separated browser origins allowed by CORS (your deployed frontend URL(s)). */
-function parseCorsOrigins(raw) {
-  const fallback = 'http://localhost:5173'
-  const s = (raw ?? '').trim()
+/** @returns {string[]} */
+function allowedOriginsList() {
+  const fallback = ['http://localhost:5173']
+  const s = (process.env.CLIENT_ORIGIN ?? '').trim()
   if (!s) return fallback
   const list = s.split(',').map((x) => x.trim()).filter(Boolean)
-  if (list.length === 0) return fallback
-  return list.length === 1 ? list[0] : list
+  return list.length ? list : fallback
 }
-
-const allowedCorsOrigins = parseCorsOrigins(process.env.CLIENT_ORIGIN)
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? ''
 const GEMINI_MODEL = (process.env.GEMINI_MODEL ?? '').trim()
 
@@ -72,12 +69,41 @@ if (
 
 app.use(
   cors({
-    origin: allowedCorsOrigins,
+    origin(origin, callback) {
+      const allowed = allowedOriginsList()
+      if (!origin) {
+        callback(null, true)
+        return
+      }
+      if (allowed.includes(origin)) {
+        callback(null, true)
+        return
+      }
+      console.warn(
+        '[cors] blocked Origin:',
+        origin,
+        '| Add it to CLIENT_ORIGIN on the backend (comma-separated). Currently allowed:',
+        allowed,
+      )
+      callback(null, false)
+    },
     /** Cache preflight (OPTIONS) so the browser repeats it rarely, not on every request (browser caps apply, often ~2h). */
     maxAge: 86400,
     methods: ['GET', 'POST', 'OPTIONS'],
   }),
 )
+
+if (process.env.LOG_REQUESTS !== '0') {
+  app.use((req, _res, next) => {
+    console.log(
+      '[express]',
+      req.method,
+      req.originalUrl || req.url,
+      req.headers.origin ? `origin=${req.headers.origin}` : '',
+    )
+    next()
+  })
+}
 app.use(express.json({ limit: '1mb' }))
 
 /** Browsers request these on the API host; answer immediately (rewrite `/(.*)` would otherwise hit the app for every asset). */
