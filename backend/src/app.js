@@ -146,6 +146,21 @@ function loadKnowledgeContextForChat(res) {
   }
 }
 
+/** Root — browsers and uptime checks often hit `/`; avoid a confusing 404. */
+app.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    service: 'ai-chat-widget-api',
+    message: 'Chat API is running. Use GET /health, GET /api/chat/welcome, or POST /api/chat.',
+    endpoints: {
+      health: 'GET /health',
+      welcome: 'GET /api/chat/welcome',
+      chat: 'POST /api/chat',
+      models: 'GET /api/gemini/models',
+    },
+  })
+})
+
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
