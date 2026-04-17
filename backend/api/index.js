@@ -75,6 +75,18 @@ module.exports = (req, res) => {
     return
   }
 
+  /*
+   * Vercel rewrites + serverless-http often deliver req.url as "/" or "/api" to Express while
+   * the real path is only in headers. We already computed `p` (same as the browser path).
+   * Force Express to see it, or app.get('/') wins and /api/chat/welcome never runs.
+   */
+  const qs =
+    typeof req.url === 'string' && req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
+  req.url = p + qs
+  if (typeof req.originalUrl === 'string') {
+    req.originalUrl = p + qs
+  }
+
   if (!cachedExpressHandler) {
     runtimeLog('api', 'cold_start: loading Express app + routes (first request after deploy can take several seconds)')
     const t0 = Date.now()

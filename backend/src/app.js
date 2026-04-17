@@ -53,6 +53,12 @@ const app = express()
  */
 if (process.env.VERCEL) {
   app.use((req, _res, next) => {
+    const pathOnly = (req.url || '/').split('?')[0]
+    /** api/index.js may have already set the real path; do not overwrite with wrong headers. */
+    if (pathOnly !== '/' && pathOnly !== '/api') {
+      next()
+      return
+    }
     const path =
       req.headers['x-vercel-forwarded-path'] ||
       req.headers['x-vercel-original-path'] ||
@@ -106,7 +112,7 @@ if (process.env.LOG_REQUESTS !== '0') {
     console.log(
       '[express]',
       req.method,
-      req.originalUrl || req.url,
+      req.url || req.originalUrl,
       req.headers.origin ? `origin=${req.headers.origin}` : '',
     )
     next()

@@ -48,6 +48,8 @@ If logs stop right after `welcome: calling generateContent` with no `generateCon
 
 **Note:** A **504 from Vercel** at exactly your **function max duration** means the whole invocation exceeded that limit (cold start + Gemini + anything else). Keep `GEMINI_REQUEST_TIMEOUT_MS` **below** `maxDuration` in `vercel.json` so the handler can return a JSON error instead of a platform 504 when possible.
 
+**If logs show `[express] GET /` but the browser called `/api/chat/welcome`:** Vercel + `serverless-http` was giving Express `req.url === "/"`, so the **`GET /`** handler ran instead of the welcome route (and you would not see `[welcome] route: entered`). `api/index.js` now forces `req.url` / `req.originalUrl` to the resolved path before calling Express.
+
 ## Run
 
 ```bash
