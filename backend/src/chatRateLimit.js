@@ -40,7 +40,7 @@ function createChatRateLimiter(opts) {
           'CLIENT_RATE_LIMIT',
           429,
           `Too many chat messages. Limit is ${max} per ${Math.round(windowMs / 1000)} seconds.`,
-          `This server allows up to ${max} POST /api/chat requests per client every ${Math.round(windowMs / 1000)} seconds. Try again in about ${Math.ceil(retryAfterSeconds)} seconds. This protects your Gemini API quota and keeps usage predictable.`,
+          `This server allows up to ${max} POST /api/chat requests per client every ${Math.round(windowMs / 1000)} seconds. Try again in about ${Math.ceil(retryAfterSeconds)} seconds. This protects your AI API quota and keeps usage predictable.`,
           [
             'Wait for the countdown, then send your message again.',
             'To change limits, set CHAT_RATE_LIMIT_MAX and CHAT_RATE_LIMIT_WINDOW_MS in backend/.env (defaults: 3 requests per 60 seconds).',

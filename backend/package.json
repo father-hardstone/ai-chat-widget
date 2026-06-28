@@ -1,7 +1,7 @@
 {
   "name": "ai-chat-widget-backend",
   "version": "1.0.0",
-  "description": "Serverless API (Vercel) + local Node http for the AI chat widget (Gemini + knowledge base).",
+  "description": "Serverless API (Vercel) + local Node http for the AI chat widget (Groq/Gemini + knowledge base).",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",

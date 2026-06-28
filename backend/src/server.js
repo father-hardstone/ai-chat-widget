@@ -12,6 +12,9 @@ const {
   handleChatPost,
   CHAT_RATE_LIMIT_MAX,
   CHAT_RATE_LIMIT_WINDOW_MS,
+  isGroqReady,
+  isGeminiReady,
+  getActiveProvider,
 } = require('./chatShared')
 
 function handleFavicon(_req, res) {
@@ -71,9 +74,15 @@ server.listen(PORT, () => {
   console.log(
     `Chat rate limit: ${CHAT_RATE_LIMIT_MAX} request(s) per ${CHAT_RATE_LIMIT_WINDOW_MS / 1000}s per client (welcome + chat)`,
   )
-  if (!process.env.GEMINI_API_KEY) {
-    console.warn('Warning: GEMINI_API_KEY is not set.')
-  } else if (!process.env.GEMINI_MODEL) {
-    console.warn('Warning: GEMINI_MODEL is not set.')
+  if (!getActiveProvider()) {
+    if (!isGroqReady() && !isGeminiReady()) {
+      console.warn('Warning: No AI provider configured. Set GROQ_API_KEY+GROQ_MODEL and/or GEMINI_API_KEY+GEMINI_MODEL.')
+    } else if (!isGroqReady()) {
+      console.warn('Warning: Groq is not fully configured (GROQ_API_KEY + GROQ_MODEL). Using Gemini.')
+    } else if (!isGeminiReady()) {
+      console.warn('Note: Gemini is not configured. Groq is the active provider.')
+    }
+  } else {
+    console.log(`Active AI provider: ${getActiveProvider()}`)
   }
 })

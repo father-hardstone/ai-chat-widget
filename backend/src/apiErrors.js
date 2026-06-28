@@ -7,6 +7,7 @@ const {
   GoogleGenerativeAIRequestInputError,
   GoogleGenerativeAIResponseError,
 } = require('@google/generative-ai')
+const { GroqApiError } = require('./groqChat')
 
 /**
  * @typedef {Object} ApiErrorBody
@@ -290,6 +291,153 @@ function mapGeminiError(err, ctx) {
 
 /**
  * @param {unknown} err
+ * @param {{ modelName: string }} ctx
+ * @returns {ApiErrorBody & { httpStatus: number }}
+ */
+function mapGroqError(err, ctx) {
+  const model = ctx.modelName || '(unknown model)'
+
+  if (err instanceof GroqApiError) {
+    const status = err.status
+    const upstream =
+      err.body && typeof err.body === 'object' && err.body.error
+        ? safeJson(err.body.error, 800)
+        : ''
+    const technical = [err.message, upstream || null].filter(Boolean).join(' ')
+
+    if (status === 401 || status === 403) {
+      return buildApiError(
+        'GROQ_AUTH',
+        502,
+        'The AI service rejected your API key.',
+        `Groq returned HTTP ${status}. This usually means the key is missing, revoked, or invalid. Your message was not processed.${upstream ? ` Additional detail from the provider: ${upstream}` : ''}`,
+        [
+          'Confirm `GROQ_API_KEY` in `backend/.env` matches a key from the Groq Console and has not been rotated.',
+          'Restart the backend after changing `.env` so the new key is loaded.',
+        ],
+      )
+    }
+
+    if (status === 404) {
+      return buildApiError(
+        'GROQ_MODEL_NOT_FOUND',
+        502,
+        'The configured Groq model could not be found.',
+        `The server requested model "${model}" but Groq responded with 404. ${technical}`,
+        [
+          'Set `GROQ_MODEL` in `backend/.env` to a supported model id (e.g. llama-3.3-70b-versatile).',
+          'See https://console.groq.com/docs/models for documentation.',
+        ],
+      )
+    }
+
+    if (status === 429) {
+      return buildApiError(
+        'GROQ_RATE_LIMIT',
+        429,
+        'The AI service is rate-limiting requests right now.',
+        `Groq returned HTTP 429 (too many requests). ${technical}`,
+        [
+          'Wait for the retry delay Groq suggests (if any), then try again.',
+          'This app also enforces its own per-minute limit on /api/chat to reduce accidental quota burn.',
+        ],
+      )
+    }
+
+    if (status === 400) {
+      return buildApiError(
+        'GROQ_BAD_REQUEST',
+        502,
+        'The AI service could not accept this request.',
+        `Groq returned HTTP 400. This often indicates an invalid parameter, payload size issue, or an unsupported model. ${technical}`,
+        [
+          'Try a shorter message to rule out size limits.',
+          `Verify \`GROQ_MODEL\` is valid. Current value: "${model}".`,
+        ],
+      )
+    }
+
+    if (status >= 500) {
+      return buildApiError(
+        'GROQ_UPSTREAM',
+        502,
+        'The AI service is temporarily unavailable.',
+        `Groq returned HTTP ${status}. This is usually a transient issue on the provider side. ${technical}`,
+        ['Wait a moment and try again.', 'Check Groq status if failures persist.'],
+      )
+    }
+
+    return buildApiError(
+      'GROQ_HTTP_ERROR',
+      502,
+      'The AI service returned an unexpected error.',
+      `HTTP ${status}. ${technical}`,
+      ['Retry in a few seconds.', 'If this continues, inspect backend logs for the full provider message.'],
+    )
+  }
+
+  if (err instanceof Error) {
+    const msg = err.message || 'Unknown error'
+    if (/timed out after \d+ms/i.test(msg)) {
+      return buildApiError(
+        'GROQ_TIMEOUT',
+        504,
+        'The AI request took too long and was stopped.',
+        msg,
+        [
+          'Retry once; transient slowness happens.',
+          'Adjust `CHAT_REQUEST_TIMEOUT_MS` (default 45000) if your host allows longer runs.',
+          'On Vercel, ensure `GROQ_API_KEY` and `GROQ_MODEL` are set.',
+        ],
+      )
+    }
+    if (/empty response/i.test(msg)) {
+      return buildApiError(
+        'GROQ_EMPTY_REPLY',
+        502,
+        'The model returned no usable text.',
+        'The response was empty after generation. This can happen with provider glitches.',
+        ['Try rephrasing your question.', 'Retry once; if it keeps happening, try another `GROQ_MODEL`.'],
+      )
+    }
+    return buildApiError(
+      'INTERNAL_ERROR',
+      500,
+      'Something went wrong while processing your message.',
+      msg,
+      ['Check backend logs for the stack trace.', 'Confirm the backend and Groq integration are configured correctly.'],
+    )
+  }
+
+  return buildApiError(
+    'UNKNOWN_ERROR',
+    500,
+    'An unexpected error occurred.',
+    safeJson(err),
+    ['Check backend logs.', 'Retry the request.'],
+  )
+}
+
+/**
+ * @param {unknown} err
+ * @param {{ provider?: 'groq' | 'gemini', modelName: string }} ctx
+ * @returns {ApiErrorBody & { httpStatus: number }}
+ */
+function mapChatError(err, ctx) {
+  if (ctx.provider === 'groq') {
+    return mapGroqError(err, ctx)
+  }
+  if (ctx.provider === 'gemini') {
+    return mapGeminiError(err, ctx)
+  }
+  if (err instanceof GroqApiError) {
+    return mapGroqError(err, ctx)
+  }
+  return mapGeminiError(err, ctx)
+}
+
+/**
+ * @param {unknown} err
  * @returns {ApiErrorBody & { httpStatus: number } | null}
  */
 function mapKnowledgeBaseError(err) {
@@ -365,6 +513,8 @@ module.exports = {
   buildApiError,
   sendApiError,
   mapGeminiError,
+  mapGroqError,
+  mapChatError,
   mapKnowledgeBaseError,
   mapBodyParserError,
 }

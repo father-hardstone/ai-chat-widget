@@ -16,15 +16,22 @@ async function handleRoot(_req, res) {
 }
 
 async function handleHealth(_req, res) {
-  const key = process.env.GEMINI_API_KEY || ''
-  const model = (process.env.GEMINI_MODEL || '').trim()
+  const groqKey = process.env.GROQ_API_KEY || ''
+  const groqModel = (process.env.GROQ_MODEL || '').trim()
+  const geminiKey = process.env.GEMINI_API_KEY || ''
+  const geminiModel = (process.env.GEMINI_MODEL || '').trim()
+  const { getActiveProvider } = require('../chatProvider')
+  const activeProvider = getActiveProvider()
   sendJson(res, 200, {
     ok: true,
     success: true,
-    geminiConfigured: Boolean(key),
-    geminiModelConfigured: Boolean(model),
-    geminiModel: model || null,
-    chatReady: Boolean(key && model),
+    activeProvider,
+    groqConfigured: Boolean(groqKey && groqModel),
+    groqModel: groqModel || null,
+    geminiConfigured: Boolean(geminiKey && geminiModel),
+    geminiModelConfigured: Boolean(geminiModel),
+    geminiModel: geminiModel || null,
+    chatReady: Boolean(activeProvider),
   })
 }
 

@@ -1,15 +1,23 @@
 require('./lib/loadEnv')
 
 const { getKnowledgeContextString } = require('./knowledgeBase')
-const { generateReply, generateWelcomeMessage } = require('./geminiChat')
-const { buildApiError, sendApiError, mapGeminiError, mapKnowledgeBaseError } = require('./apiErrors')
+const {
+  GEMINI_API_KEY,
+  GEMINI_MODEL,
+  GROQ_API_KEY,
+  GROQ_MODEL,
+  getActiveProvider,
+  isGeminiReady,
+  isGroqReady,
+  generateReply,
+  generateWelcomeMessage,
+  modelNameForProvider,
+} = require('./chatProvider')
+const { buildApiError, sendApiError, mapChatError, mapKnowledgeBaseError } = require('./apiErrors')
 const { createChatRateLimiter } = require('./chatRateLimit')
 const { listModelsWithGenerateContent } = require('./geminiModels')
 const { runtimeLog, runtimeError } = require('./runtimeLog')
 const { sendJson } = require('./lib/httpJson')
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? ''
-const GEMINI_MODEL = (process.env.GEMINI_MODEL ?? '').trim()
 
 const rawRateMax = Number(process.env.CHAT_RATE_LIMIT_MAX)
 const CHAT_RATE_LIMIT_MAX =
@@ -31,37 +39,25 @@ function requestId(req) {
   return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 }
 
-function requireGeminiEnv(res) {
-  if (!GEMINI_API_KEY) {
-    sendApiError(
-      res,
-      buildApiError(
-        'GEMINI_NOT_CONFIGURED',
-        503,
-        'The assistant is not connected to the AI service yet.',
-        'The backend has no `GEMINI_API_KEY`.',
-        [
-          'Set `GEMINI_API_KEY` in `backend/.env` or Vercel env.',
-          'Restart after changing env.',
-        ],
-      ),
-    )
-    return false
-  }
-  if (!GEMINI_MODEL) {
-    sendApiError(
-      res,
-      buildApiError(
-        'GEMINI_MODEL_NOT_SET',
-        503,
-        'No Gemini model is configured.',
-        'Set `GEMINI_MODEL` in env.',
-        ['Call GET /api/gemini/models and copy an `id` into `GEMINI_MODEL`.'],
-      ),
-    )
-    return false
-  }
-  return true
+function requireAiEnv(res) {
+  const active = getActiveProvider()
+  if (active) return true
+
+  sendApiError(
+    res,
+    buildApiError(
+      'AI_NOT_CONFIGURED',
+      503,
+      'The assistant is not connected to an AI service yet.',
+      'Configure at least one provider: Groq (`GROQ_API_KEY` + `GROQ_MODEL`) and/or Gemini (`GEMINI_API_KEY` + `GEMINI_MODEL`). Groq is preferred when both are set.',
+      [
+        'Set `GROQ_API_KEY` and `GROQ_MODEL` from the Groq Console (preferred).',
+        'Or set `GEMINI_API_KEY` and `GEMINI_MODEL` from Google AI Studio.',
+        'Restart after changing env.',
+      ],
+    ),
+  )
+  return false
 }
 
 function loadKnowledgeContextForChat(res) {
@@ -116,8 +112,8 @@ async function handleModels(_req, res) {
       buildApiError(
         'GEMINI_NOT_CONFIGURED',
         503,
-        'No API key configured.',
-        'Set GEMINI_API_KEY in env.',
+        'No Gemini API key configured.',
+        'Set GEMINI_API_KEY in env to list Gemini models.',
         [],
       ),
     )
@@ -127,6 +123,7 @@ async function handleModels(_req, res) {
     const models = await listModelsWithGenerateContent(GEMINI_API_KEY)
     sendJson(res, 200, {
       success: true,
+      activeProvider: getActiveProvider(),
       activeModel: GEMINI_MODEL,
       models,
     })
@@ -152,23 +149,23 @@ async function handleWelcome(req, res) {
   const rid = requestId(req)
   runtimeLog('welcome', 'route: entered', { rid })
   await runChatRateLimit(req, res, async () => {
-    if (!requireGeminiEnv(res)) return
-    runtimeLog('welcome', 'route: GEMINI_* env ok', { rid })
+    if (!requireAiEnv(res)) return
+    runtimeLog('welcome', 'route: AI env ok', { rid, provider: getActiveProvider() })
     const knowledgeContext = loadKnowledgeContextForChat(res)
     if (knowledgeContext == null) return
     runtimeLog('welcome', 'route: knowledge base loaded', { rid, contextChars: knowledgeContext.length })
 
     try {
-      const reply = await generateWelcomeMessage({
-        apiKey: GEMINI_API_KEY,
-        modelName: GEMINI_MODEL,
-        knowledgeContext,
-      })
-      runtimeLog('welcome', 'route: response sent', { rid, replyChars: reply.length })
+      const { reply, provider } = await generateWelcomeMessage({ knowledgeContext })
+      runtimeLog('welcome', 'route: response sent', { rid, replyChars: reply.length, provider })
       sendJson(res, 200, { success: true, reply })
     } catch (e) {
       runtimeError('welcome', 'route: handler error', e instanceof Error ? e : { detail: String(e) })
-      const mapped = mapGeminiError(e, { modelName: GEMINI_MODEL })
+      const provider =
+        e && typeof e === 'object' && 'aiProvider' in e && (e.aiProvider === 'groq' || e.aiProvider === 'gemini')
+          ? e.aiProvider
+          : getActiveProvider() ?? 'groq'
+      const mapped = mapChatError(e, { provider, modelName: modelNameForProvider(provider) })
       sendApiError(res, mapped)
     }
   })
@@ -199,8 +196,8 @@ async function handleChatPost(req, res) {
   }
 
   await runChatRateLimit(req, res, async () => {
-    if (!requireGeminiEnv(res)) return
-    runtimeLog('chat', 'route: GEMINI_* env ok', { rid })
+    if (!requireAiEnv(res)) return
+    runtimeLog('chat', 'route: AI env ok', { rid, provider: getActiveProvider() })
     const knowledgeContext = loadKnowledgeContextForChat(res)
     if (knowledgeContext == null) return
     runtimeLog('chat', 'route: knowledge base loaded', { rid, contextChars: knowledgeContext.length })
@@ -212,19 +209,21 @@ async function handleChatPost(req, res) {
         : undefined
 
     try {
-      const reply = await generateReply({
-        apiKey: GEMINI_API_KEY,
-        modelName: GEMINI_MODEL,
+      const { reply, provider } = await generateReply({
         knowledgeContext,
         userMessage: message,
         history,
         userMessageCount,
       })
-      runtimeLog('chat', 'route: response sent', { rid, replyChars: reply.length })
+      runtimeLog('chat', 'route: response sent', { rid, replyChars: reply.length, provider })
       sendJson(res, 200, { success: true, reply })
     } catch (e) {
       runtimeError('chat', 'route: handler error', e instanceof Error ? e : { detail: String(e) })
-      const mapped = mapGeminiError(e, { modelName: GEMINI_MODEL })
+      const provider =
+        e && typeof e === 'object' && 'aiProvider' in e && (e.aiProvider === 'groq' || e.aiProvider === 'gemini')
+          ? e.aiProvider
+          : getActiveProvider() ?? 'groq'
+      const mapped = mapChatError(e, { provider, modelName: modelNameForProvider(provider) })
       sendApiError(res, mapped)
     }
   })
@@ -236,6 +235,11 @@ module.exports = {
   handleChatPost,
   GEMINI_API_KEY,
   GEMINI_MODEL,
+  GROQ_API_KEY,
+  GROQ_MODEL,
+  isGroqReady,
+  isGeminiReady,
+  getActiveProvider,
   CHAT_RATE_LIMIT_MAX,
   CHAT_RATE_LIMIT_WINDOW_MS,
 }
